@@ -9,6 +9,8 @@
 @property (nonatomic, strong) NSDictionary *defaultOptions;
 @property (nonatomic, retain) NSMutableDictionary *options;
 @property (nonatomic, strong) NSDictionary *customButtons;
+@property (nonatomic, strong) ImageCropViewController *croper;
+@property (nonatomic, strong) UINavigationController *navi;
 
 @end
 
@@ -160,8 +162,18 @@ RCT_EXPORT_METHOD(showImagePicker:(NSDictionary *)options callback:(RCTResponseS
     self.picker.modalPresentationStyle = UIModalPresentationCurrentContext;
     self.picker.delegate = self;
 
-    UIViewController *root = [[[[UIApplication sharedApplication] delegate] window] rootViewController];
+  
     dispatch_async(dispatch_get_main_queue(), ^{
+      UIViewController *root = [[[[UIApplication sharedApplication] delegate] window] rootViewController];
+//      if (root.presentedViewController){
+//        if (root.presentedViewController.navigationController) {
+//          NSLog(@"navigation controller exists");
+//          [root.navigationController pushViewController:self.picker animated:YES];
+//        }
+//      }else{
+//        NSLog(@"navigation controller not exists");
+//        [[root navigationController]pushViewController:self.picker animated:YES];
+//      }
         if (root.presentedViewController) {
             [root.presentedViewController presentViewController:self.picker animated:YES completion:nil];
         }
@@ -171,20 +183,167 @@ RCT_EXPORT_METHOD(showImagePicker:(NSDictionary *)options callback:(RCTResponseS
     });
 }
 
+- (void)ImageCropViewController:(ImageCropViewController *)controller didFinishCroppingImage:(UIImage *)croppedImage{
+//  image = croppedImage;
+//  imageView.image = croppedImage;
+  NSLog(@"didFinishCroppingImage");
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [controller dismissViewControllerAnimated:YES completion:nil];
+    [self HandleImage:croppedImage];
+  });
+}
+
+- (void)ImageCropViewControllerDidCancel:(ImageCropViewController *)controller{
+  NSLog(@"cancle crop image");
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [controller dismissViewControllerAnimated:YES completion:nil];
+  });
+}
+
 - (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary *)info
 {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [picker dismissViewControllerAnimated:YES completion:nil];
-    });
+  NSLog(@"imagePickerController didFinishPickingMediaWithInfo %@", info);
+  
+  dispatch_async(dispatch_get_main_queue(), ^{
+    UIImage *image = [info objectForKey:UIImagePickerControllerOriginalImage];
+//    UIViewController *root = [[[[UIApplication sharedApplication] delegate] window] rootViewController];
+    self.croper = [[ImageCropViewController alloc] initWithImage:image];
+    self.navi = [[UINavigationController alloc] init];
+    BOOL bAnimation = NO;
+//    if (root.presentedViewController) {
+//      [root.presentedViewController presentViewController:self.navi animated:bAnimation completion:^{
+//        [self.navi pushViewController:self.croper animated:bAnimation];
+//      }];
+//    }else{
+//      [root presentViewController:self.navi animated:bAnimation completion:^{
+//        [self.navi pushViewController:self.croper animated:bAnimation];
+//      }];
+//    }
+//  });
+    
+    [picker dismissViewControllerAnimated:YES completion:^{
+      UIImage *image = [info objectForKey:UIImagePickerControllerOriginalImage];
+      self.croper = [[ImageCropViewController alloc] initWithImage:image];
+      self.navi = [[UINavigationController alloc] init];
+      UIViewController *root = [[[[UIApplication sharedApplication] delegate] window] rootViewController];
+      self.croper.delegate = self;
+      if (root.presentedViewController) {
+        [root.presentedViewController presentViewController:self.navi animated:bAnimation completion:^{
+          [self.navi pushViewController:self.croper animated:bAnimation];
+        }];
+      }else{
+        [root presentViewController:self.navi animated:bAnimation completion:^{
+          [self.navi pushViewController:self.croper animated:bAnimation];
+        }];
+      }
 
+//        if (root.navigationController){
+//          [root.navigationController pushViewController:self.croper animated:YES];
+//        }
+//        if (root.presentedViewController) {
+//          [root.presentedViewController presentViewController:self.croper animated:YES completion:nil];
+//        }else{
+//          [root presentViewController:self.croper animated:YES completion:nil];
+//        }
+    }];
+//      [picker dismissViewControllerAnimated:YES completion:nil];
+  });
+
+//    /* Picked Image */
+//    UIImage *image;
+//    if ([[self.options objectForKey:@"allowsEditing"] boolValue]) {
+//      image = [info objectForKey:UIImagePickerControllerEditedImage];
+//    }
+//    else {
+//      image = [info objectForKey:UIImagePickerControllerOriginalImage];
+//    }
+//
+//    /* creating a temp url to be passed */
+//    NSString *ImageUUID = [[NSUUID UUID] UUIDString];
+//    NSString *ImageName = [ImageUUID stringByAppendingString:@".jpg"];
+//
+//    // This will be the default URL
+//    NSString* path = [[NSTemporaryDirectory()stringByStandardizingPath] stringByAppendingPathComponent:ImageName];
+//    
+//    NSDictionary *storageOptions;
+//    // if storage options are provided change path to the documents directory
+//    if([self.options objectForKey:@"storageOptions"] && [[self.options objectForKey:@"storageOptions"] isKindOfClass:[NSDictionary class]]){
+//        // retrieve documents path
+//        NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+//        NSString *documentsDirectory = [paths objectAtIndex:0];
+//        // update path to save image to documents directory
+//        path = [documentsDirectory stringByAppendingPathComponent:ImageName];
+//
+//        storageOptions = [self.options objectForKey:@"storageOptions"];
+//        // if extra path is provided try to create it
+//        if ([storageOptions objectForKey:@"path"]) {
+//            NSString *newPath = [documentsDirectory stringByAppendingPathComponent:[storageOptions objectForKey:@"path"]];
+//            NSError *error = nil;
+//            [[NSFileManager defaultManager] createDirectoryAtPath:newPath withIntermediateDirectories:YES attributes:nil error:&error];
+//            
+//            // if there was an error do not update path
+//            if (error != nil) {
+//                NSLog(@"error creating directory: %@", error);
+//            }
+//            else {
+//                path = [newPath stringByAppendingPathComponent:ImageName];
+//            }
+//        }
+//    }
+//    
+//
+//    
+//    // Rotate the image for upload to web
+//    image = [self fixOrientation:image];
+//
+//    //If needed, downscale image
+//    float maxWidth = image.size.width;
+//    float maxHeight = image.size.height;
+//    if ([self.options valueForKey:@"maxWidth"]) {
+//        maxWidth = [[self.options valueForKey:@"maxWidth"] floatValue];
+//    }
+//    if ([self.options valueForKey:@"maxHeight"]) {
+//        maxHeight = [[self.options valueForKey:@"maxHeight"] floatValue];
+//    }
+//    image = [self downscaleImageIfNecessary:image maxWidth:maxWidth maxHeight:maxHeight];
+//
+//    // Create the response object
+//    NSMutableDictionary *response = [[NSMutableDictionary alloc] init];
+//    
+//    [response setObject:@(maxWidth) forKey:@"width"];
+//    [response setObject:@(maxHeight) forKey:@"height"];
+//
+//    NSData *data = UIImageJPEGRepresentation(image, [[self.options valueForKey:@"quality"] floatValue]);
+//    // base64 encoded image string, unless the caller doesn't want it
+//    if (![[self.options objectForKey:@"noData"] boolValue]) {
+//        NSString *dataString = [data base64EncodedStringWithOptions:0];
+//        [response setObject:dataString forKey:@"data"];
+//    }
+//
+//    // file uri
+//    [data writeToFile:path atomically:YES];
+//    NSString *fileURL = [[NSURL fileURLWithPath:path] absoluteString];
+//    if ([[storageOptions objectForKey:@"skipBackup"] boolValue]) {
+//        [self addSkipBackupAttributeToItemAtPath:path];
+//    }
+//    [response setObject:fileURL forKey:@"uri"];
+//    
+//    // image orientation
+//    BOOL vertical = (image.size.width < image.size.height) ? YES : NO;
+//    [response setObject:@(vertical) forKey:@"isVertical"];
+//
+//    self.callback(@[@NO, response]);
+}
+
+- (void)HandleImage:(UIImage*)image{
     /* Picked Image */
-    UIImage *image;
-    if ([[self.options objectForKey:@"allowsEditing"] boolValue]) {
-      image = [info objectForKey:UIImagePickerControllerEditedImage];
-    }
-    else {
-      image = [info objectForKey:UIImagePickerControllerOriginalImage];
-    }
+//    UIImage *image;
+//    if ([[self.options objectForKey:@"allowsEditing"] boolValue]) {
+//      image = [info objectForKey:UIImagePickerControllerEditedImage];
+//    }
+//    else {
+//      image = [info objectForKey:UIImagePickerControllerOriginalImage];
+//    }
 
     /* creating a temp url to be passed */
     NSString *ImageUUID = [[NSUUID UUID] UUIDString];
@@ -192,7 +351,7 @@ RCT_EXPORT_METHOD(showImagePicker:(NSDictionary *)options callback:(RCTResponseS
 
     // This will be the default URL
     NSString* path = [[NSTemporaryDirectory()stringByStandardizingPath] stringByAppendingPathComponent:ImageName];
-    
+
     NSDictionary *storageOptions;
     // if storage options are provided change path to the documents directory
     if([self.options objectForKey:@"storageOptions"] && [[self.options objectForKey:@"storageOptions"] isKindOfClass:[NSDictionary class]]){
@@ -208,7 +367,7 @@ RCT_EXPORT_METHOD(showImagePicker:(NSDictionary *)options callback:(RCTResponseS
             NSString *newPath = [documentsDirectory stringByAppendingPathComponent:[storageOptions objectForKey:@"path"]];
             NSError *error = nil;
             [[NSFileManager defaultManager] createDirectoryAtPath:newPath withIntermediateDirectories:YES attributes:nil error:&error];
-            
+
             // if there was an error do not update path
             if (error != nil) {
                 NSLog(@"error creating directory: %@", error);
@@ -218,9 +377,9 @@ RCT_EXPORT_METHOD(showImagePicker:(NSDictionary *)options callback:(RCTResponseS
             }
         }
     }
-    
 
-    
+
+
     // Rotate the image for upload to web
     image = [self fixOrientation:image];
 
@@ -237,7 +396,7 @@ RCT_EXPORT_METHOD(showImagePicker:(NSDictionary *)options callback:(RCTResponseS
 
     // Create the response object
     NSMutableDictionary *response = [[NSMutableDictionary alloc] init];
-    
+
     [response setObject:@(maxWidth) forKey:@"width"];
     [response setObject:@(maxHeight) forKey:@"height"];
 
@@ -255,7 +414,7 @@ RCT_EXPORT_METHOD(showImagePicker:(NSDictionary *)options callback:(RCTResponseS
         [self addSkipBackupAttributeToItemAtPath:path];
     }
     [response setObject:fileURL forKey:@"uri"];
-    
+
     // image orientation
     BOOL vertical = (image.size.width < image.size.height) ? YES : NO;
     [response setObject:@(vertical) forKey:@"isVertical"];
