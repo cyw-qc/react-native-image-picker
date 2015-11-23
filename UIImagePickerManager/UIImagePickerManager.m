@@ -47,6 +47,7 @@ RCT_EXPORT_METHOD(launchImageLibrary:(NSDictionary *)options callback:(RCTRespon
 
 RCT_EXPORT_METHOD(showImagePicker:(NSDictionary *)options callback:(RCTResponseSenderBlock)callback)
 {
+  NSLog(@"callback is %@", callback);
     self.callback = callback; // Save the callback so we can use it from the delegate methods
     self.options = [NSMutableDictionary dictionaryWithDictionary:self.defaultOptions]; // Set default options
     for (NSString *key in options.keyEnumerator) { // Replace default options
@@ -156,9 +157,9 @@ RCT_EXPORT_METHOD(showImagePicker:(NSDictionary *)options callback:(RCTResponseS
             return;
     }
 
-    if ([[self.options objectForKey:@"allowsEditing"] boolValue]) {
-        self.picker.allowsEditing = true;
-    }
+//    if ([[self.options objectForKey:@"allowsEditing"] boolValue]) {
+//        self.picker.allowsEditing = true;
+//    }
     self.picker.modalPresentationStyle = UIModalPresentationCurrentContext;
     self.picker.delegate = self;
 
@@ -196,7 +197,9 @@ RCT_EXPORT_METHOD(showImagePicker:(NSDictionary *)options callback:(RCTResponseS
 - (void)ImageCropViewControllerDidCancel:(ImageCropViewController *)controller{
   NSLog(@"cancle crop image");
   dispatch_async(dispatch_get_main_queue(), ^{
-    [controller dismissViewControllerAnimated:YES completion:nil];
+    [controller dismissViewControllerAnimated:YES completion:^{
+      self.callback(@[@YES, [NSNull null]]);
+    }];
   });
 }
 
@@ -207,46 +210,59 @@ RCT_EXPORT_METHOD(showImagePicker:(NSDictionary *)options callback:(RCTResponseS
   dispatch_async(dispatch_get_main_queue(), ^{
     UIImage *image = [info objectForKey:UIImagePickerControllerOriginalImage];
 //    UIViewController *root = [[[[UIApplication sharedApplication] delegate] window] rootViewController];
+//    if ([[self.options objectForKey:@"allowsEditing"] boolValue] == true){
     self.croper = [[ImageCropViewController alloc] initWithImage:image];
     self.navi = [[UINavigationController alloc] init];
     BOOL bAnimation = NO;
-//    if (root.presentedViewController) {
-//      [root.presentedViewController presentViewController:self.navi animated:bAnimation completion:^{
-//        [self.navi pushViewController:self.croper animated:bAnimation];
-//      }];
-//    }else{
-//      [root presentViewController:self.navi animated:bAnimation completion:^{
-//        [self.navi pushViewController:self.croper animated:bAnimation];
-//      }];
-//    }
-//  });
+    //    if (root.presentedViewController) {
+    //      [root.presentedViewController presentViewController:self.navi animated:bAnimation completion:^{
+    //        [self.navi pushViewController:self.croper animated:bAnimation];
+    //      }];
+    //    }else{
+    //      [root presentViewController:self.navi animated:bAnimation completion:^{
+    //        [self.navi pushViewController:self.croper animated:bAnimation];
+    //      }];
+    //    }
+    //  });
     
     [picker dismissViewControllerAnimated:YES completion:^{
       UIImage *image = [info objectForKey:UIImagePickerControllerOriginalImage];
-      self.croper = [[ImageCropViewController alloc] initWithImage:image];
-      self.navi = [[UINavigationController alloc] init];
-      UIViewController *root = [[[[UIApplication sharedApplication] delegate] window] rootViewController];
-      self.croper.delegate = self;
-      if (root.presentedViewController) {
-        [root.presentedViewController presentViewController:self.navi animated:bAnimation completion:^{
-          [self.navi pushViewController:self.croper animated:bAnimation];
-        }];
+      if ([[self.options objectForKey:@"allowsEditing"] boolValue] == true){
+        NSLog(@"edit is true");
+        self.croper = [[ImageCropViewController alloc] initWithImage:image];
+        self.navi = [[UINavigationController alloc] init];
+        UIViewController *root = [[[[UIApplication sharedApplication] delegate] window] rootViewController];
+        self.croper.delegate = self;
+        if (root.presentedViewController) {
+          [root.presentedViewController presentViewController:self.navi animated:bAnimation completion:^{
+            [self.navi pushViewController:self.croper animated:bAnimation];
+          }];
+        }else{
+          [root presentViewController:self.navi animated:bAnimation completion:^{
+            [self.navi pushViewController:self.croper animated:bAnimation];
+          }];
+        }
       }else{
-        [root presentViewController:self.navi animated:bAnimation completion:^{
-          [self.navi pushViewController:self.croper animated:bAnimation];
-        }];
+        NSLog(@"edit is false");
+        [self HandleImage:image];
       }
+        
+        
+        //        if (root.navigationController){
+        //          [root.navigationController pushViewController:self.croper animated:YES];
+        //        }
+        //        if (root.presentedViewController) {
+        //          [root.presentedViewController presentViewController:self.croper animated:YES completion:nil];
+        //        }else{
+        //          [root presentViewController:self.croper animated:YES completion:nil];
+        //        }
+      }];
+      //      [picker dismissViewControllerAnimated:YES completion:nil];
+//    }else{
+//      NSLog(@"edit is false");
+//      [self HandleImage:image];
+//    }
 
-//        if (root.navigationController){
-//          [root.navigationController pushViewController:self.croper animated:YES];
-//        }
-//        if (root.presentedViewController) {
-//          [root.presentedViewController presentViewController:self.croper animated:YES completion:nil];
-//        }else{
-//          [root presentViewController:self.croper animated:YES completion:nil];
-//        }
-    }];
-//      [picker dismissViewControllerAnimated:YES completion:nil];
   });
 
 //    /* Picked Image */
@@ -420,15 +436,16 @@ RCT_EXPORT_METHOD(showImagePicker:(NSDictionary *)options callback:(RCTResponseS
     [response setObject:@(vertical) forKey:@"isVertical"];
 
     self.callback(@[@NO, response]);
+  NSLog(@"handle image call back is %@", self.callback);
 }
 
 - (void)imagePickerControllerDidCancel:(UIImagePickerController *)picker
 {
     dispatch_async(dispatch_get_main_queue(), ^{
-        [picker dismissViewControllerAnimated:YES completion:nil];
+      [picker dismissViewControllerAnimated:YES completion:^{
+        self.callback(@[@YES, [NSNull null]]);
+      }];
     });
-    
-    self.callback(@[@YES, [NSNull null]]);
 }
 
 - (UIImage*)downscaleImageIfNecessary:(UIImage*)image maxWidth:(float)maxWidth maxHeight:(float)maxHeight
