@@ -52,6 +52,8 @@ float IMAGE_MIN_WIDTH = 400;
                                                   target:self
                                                   action:@selector(done:)];
         CGSize statusBarSize = [[UIApplication sharedApplication] statusBarFrame].size;
+      //设置为不透明
+      [[self navigationController]navigationBar].translucent = false;
         CGRect view = CGRectMake(0, 0, self.view.bounds.size.width, self.view.bounds.size.height - [[self navigationController] navigationBar].bounds.size.height - statusBarSize.height);
         self.cropView  = [[ImageCropView alloc] initWithFrame:view blurOn:self.blurredBackground];
         self.view = contentView;
@@ -186,9 +188,11 @@ float IMAGE_MIN_WIDTH = 400;
 
 @end
 
+#pragma mark 控制句柄大小
+static CGFloat const DEFAULT_CONTROL_POINT_SIZE = 1;
+
 #pragma mark - MaskImageView implementation
 
-static CGFloat const DEFAULT_CONTROL_POINT_SIZE = 5;
 
 CGRect SquareCGRectAtCenter(CGFloat centerX, CGFloat centerY, CGFloat size) {
     CGFloat x = centerX - size / 2.0;
@@ -200,12 +204,14 @@ CGRect SquareCGRectAtCenter(CGFloat centerX, CGFloat centerY, CGFloat size) {
 
 @synthesize cropAreaInImage;
 @synthesize imageScale;
+@synthesize resizeAble;
 
 - (id)initWithFrame:(CGRect)frame
 {
     self = [super initWithFrame:frame];
     if (self) {
         [self initViews];
+      self.resizeAble = true;
     }
     return self;
 }
@@ -240,6 +246,14 @@ CGRect SquareCGRectAtCenter(CGFloat centerX, CGFloat centerY, CGFloat size) {
     controlPointSize = DEFAULT_CONTROL_POINT_SIZE;
     int initialClearAreaSize = self.frame.size.width / 5;
     CGPoint centerInView = CGPointMake(self.bounds.size.width / 2, self.bounds.size.height / 2);
+//    topLeftPoint = [self createControlPointAt:SquareCGRectAtCenter(5, 5, controlPointSize)];
+//
+//    bottomLeftPoint = [self createControlPointAt:SquareCGRectAtCenter(5, 164, controlPointSize)];
+//
+//    bottomRightPoint = [self createControlPointAt:SquareCGRectAtCenter(164, 164, controlPointSize) ];
+//
+//    topRightPoint = [self createControlPointAt:SquareCGRectAtCenter(164, 5, controlPointSize)];
+
     topLeftPoint = [self createControlPointAt:SquareCGRectAtCenter(centerInView.x - initialClearAreaSize,
                                                                    centerInView.y - initialClearAreaSize, 
                                                                    controlPointSize)];
@@ -253,7 +267,7 @@ CGRect SquareCGRectAtCenter(CGFloat centerX, CGFloat centerY, CGFloat size) {
     
     topRightPoint = [self createControlPointAt:SquareCGRectAtCenter(centerInView.x + initialClearAreaSize, 
                                                                     centerInView.y - initialClearAreaSize, controlPointSize)];
-    
+  
     //the "hole"
     CGRect cropArea = [self clearAreaFromControlPoints];
     cropAreaView = [[UIView alloc] initWithFrame:cropArea];
@@ -304,12 +318,21 @@ CGRect SquareCGRectAtCenter(CGFloat centerX, CGFloat centerY, CGFloat size) {
 }
 
 - (void)boundingBoxForTopLeft:(CGPoint)topLeft bottomLeft:(CGPoint)bottomLeft bottomRight:(CGPoint)bottomRight topRight:(CGPoint)topRight {
+  NSLog(@"topLeft: %@, bottomLeft: %@, bottomRight: %@, topRight: %@", NSStringFromCGPoint(topLeft), NSStringFromCGPoint(bottomLeft), NSStringFromCGPoint(bottomRight), NSStringFromCGPoint(topRight));
     CGRect box = CGRectMake(topLeft.x - controlPointSize / 2, topLeft.y - controlPointSize / 2 , topRight.x - topLeft.x + controlPointSize , bottomRight.y - topRight.y + controlPointSize );
     //If not square - crop cropView =-)
+  //先移除这行代码
     if (!square){
-        box = CGRectIntersection(imageFrameInView, box);
+//        box = CGRectIntersection(imageFrameInView, box);
+      box.origin = imageFrameInView.origin;
+      if (box.origin.x < imageFrameInView.origin.x) {
+        box.origin.x = imageFrameInView.origin.x;
+      }
+      if (box.size.width > imageFrameInView.size.width){
+        box.size.width = imageFrameInView.size.width;
+      }
     }
-    
+  
     if (CGRectContainsRect(imageFrameInView, box)) {
         bottomLeftPoint.center = CGPointMake(box.origin.x + controlPointSize / 2, box.origin.y + box.size.height - controlPointSize / 2);
         bottomRightPoint.center = CGPointMake(box.origin.x + box.size.width - controlPointSize / 2, box.origin.y + box.size.height - controlPointSize / 2);;
@@ -320,11 +343,15 @@ CGRect SquareCGRectAtCenter(CGFloat centerX, CGFloat centerY, CGFloat size) {
 
 - (UIView*)  checkHit:(CGPoint)point {
     UIView* view = cropAreaView;
+  
+  // 用resizeAble来控制外面的框是否可以移动
+  if (self.resizeAble == true){
     for (int i =0; i < PointsArray.count; i++) {
         if (sqrt(pow((point.x-view.center.x),2) + pow((point.y-view.center.y),2))>sqrt(pow((point.x- [PointsArray[i] center].x),2) + pow((point.y- [PointsArray[i] center].y),2)))
             view = PointsArray[i];
          }
-    
+  }
+  
     return view;
 }
 
@@ -350,6 +377,7 @@ CGRect SquareCGRectAtCenter(CGFloat centerX, CGFloat centerY, CGFloat size) {
     }
     
     if (count > 1) {
+//      NSLog(@"count : %lu", (unsigned long)count);
         // Transforms crop box based on the two dragPoints.
         for (int i = 0; i < count; i++) {
             dragPoint = i == 0 ? multiDragPoint.mainPoint : multiDragPoint.optionalPoint;
@@ -706,6 +734,20 @@ CGRect SquareCGRectAtCenter(CGFloat centerX, CGFloat centerY, CGFloat size) {
     [self setNeedsDisplay];
 }
 
+//给出萌芽要求的2:1的框
+- (CGSize)getCropBorder {
+  CGFloat width = imageView.frame.size.width;
+  CGFloat height = imageView.frame.size.height;
+  NSLog(@"imageView.frame is: %@", NSStringFromCGRect(imageView.frame));
+  if (width/2 > height) {
+    NSLog(@"cropBorderA size is: %@", NSStringFromCGSize(CGSizeMake(height*2, height)));
+    return CGSizeMake(height*2, height);
+  }else{
+    NSLog(@"cropBorderB size is: %@", NSStringFromCGSize(CGSizeMake(width, width/2)));
+    return CGSizeMake(width, width/2);
+  }
+}
+
 - (void)setImage:(UIImage *)image {
     CGFloat frameWidth = self.frame.size.width;
     CGFloat frameHeight = self.frame.size.height;
@@ -760,13 +802,20 @@ CGRect SquareCGRectAtCenter(CGFloat centerX, CGFloat centerY, CGFloat size) {
     [self.shadeView.blurredImageView setImage:blur];
     
     //Special fix. If scaledImageWidth or scaledImageHeight < clearArea.width of clearArea.Height.
+  CGSize cropBorder = [self getCropBorder];
+  topLeftPoint.center = CGPointMake(0, imageView.frame.origin.y);
+  bottomLeftPoint.center = CGPointMake(0, imageView.frame.origin.y+cropBorder.height);
+  bottomRightPoint.center = CGPointMake(cropBorder.width, imageView.frame.origin.y+cropBorder.height);
+  topRightPoint.center = CGPointMake(cropBorder.width, imageView.frame.origin.y);
     [self boundingBoxForTopLeft:topLeftPoint.center bottomLeft:bottomLeftPoint.center bottomRight:bottomRightPoint.center topRight:topRightPoint.center];
     CGRect clearArea = [self clearAreaFromControlPoints];
     cropAreaView.frame = clearArea;
     clearArea.origin.y = clearArea.origin.y - imageFrameInView.origin.y;
     clearArea.origin.x = clearArea.origin.x - imageFrameInView.origin.x;
     [self.shadeView setCropArea:clearArea];
-    
+  NSLog(@"imageView.frame: %@", NSStringFromCGRect(imageView.frame));
+  NSLog(@"cropAreaView.frame: %@", NSStringFromCGRect(cropAreaView.frame));
+  
 }
 
 - (UIColor*)controlColor {

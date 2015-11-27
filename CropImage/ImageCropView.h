@@ -70,6 +70,8 @@ typedef struct {
     
     UIView* dragViewOne;
     UIView* dragViewTwo;
+  
+  BOOL resizeAble;
 }
 - (id)initWithFrame:(CGRect)frame blurOn:(BOOL)blurOn;
 - (void)setImage:(UIImage*)image;
@@ -83,6 +85,7 @@ typedef struct {
 @property (nonatomic, retain) UIColor* controlColor;
 @property (nonatomic, strong) ShadeView* shadeView;
 @property (nonatomic) BOOL blurred;
+@property (nonatomic) BOOL resizeAble;
 
 @end
 

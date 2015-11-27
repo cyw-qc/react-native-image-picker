@@ -212,7 +212,10 @@ RCT_EXPORT_METHOD(showImagePicker:(NSDictionary *)options callback:(RCTResponseS
 //    UIViewController *root = [[[[UIApplication sharedApplication] delegate] window] rootViewController];
 //    if ([[self.options objectForKey:@"allowsEditing"] boolValue] == true){
     self.croper = [[ImageCropViewController alloc] initWithImage:image];
+    //禁止缩放
+    self.croper.cropView.resizeAble = false;
     self.navi = [[UINavigationController alloc] init];
+
     BOOL bAnimation = NO;
     //    if (root.presentedViewController) {
     //      [root.presentedViewController presentViewController:self.navi animated:bAnimation completion:^{
