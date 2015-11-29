@@ -13,6 +13,11 @@ float IMAGE_MIN_WIDTH = 400;
 
 #pragma mark ImageCropViewController implementation
 
+@implementation BlurredImageView
+@end
+
+@implementation CropAreaView
+@end
 
 @implementation ImageCropViewController
 
@@ -56,6 +61,8 @@ float IMAGE_MIN_WIDTH = 400;
       [[self navigationController]navigationBar].translucent = false;
         CGRect view = CGRectMake(0, 0, self.view.bounds.size.width, self.view.bounds.size.height - [[self navigationController] navigationBar].bounds.size.height - statusBarSize.height);
         self.cropView  = [[ImageCropView alloc] initWithFrame:view blurOn:self.blurredBackground];
+      //让遮罩颜色更深
+        self.cropView.blurred = true;
         self.view = contentView;
         [contentView addSubview:cropView];
         [cropView setImage:self.image];
@@ -134,7 +141,7 @@ float IMAGE_MIN_WIDTH = 400;
     if (self) {
         // Initialization code
         self.opaque = NO;
-        self.blurredImageView = [[UIImageView alloc] init];
+        self.blurredImageView = [[BlurredImageView alloc] init];
     }
     return self;
 }
@@ -270,7 +277,7 @@ CGRect SquareCGRectAtCenter(CGFloat centerX, CGFloat centerY, CGFloat size) {
   
     //the "hole"
     CGRect cropArea = [self clearAreaFromControlPoints];
-    cropAreaView = [[UIView alloc] initWithFrame:cropArea];
+    cropAreaView = [[CropAreaView alloc] initWithFrame:cropArea];
     cropAreaView.opaque = NO;
     cropAreaView.backgroundColor = [UIColor clearColor];
     UIPanGestureRecognizer* dragRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handleDrag:)];
@@ -324,7 +331,7 @@ CGRect SquareCGRectAtCenter(CGFloat centerX, CGFloat centerY, CGFloat size) {
   //先移除这行代码
     if (!square){
 //        box = CGRectIntersection(imageFrameInView, box);
-      box.origin = imageFrameInView.origin;
+//      box.origin = imageFrameInView.origin;
       if (box.origin.x < imageFrameInView.origin.x) {
         box.origin.x = imageFrameInView.origin.x;
       }
@@ -798,15 +805,21 @@ CGRect SquareCGRectAtCenter(CGFloat centerX, CGFloat centerY, CGFloat size) {
         blur = [image blurredImageWithRadius:30 iterations:1 tintColor:[UIColor blackColor]];
     } else {
         blur = [image blurredImageWithRadius:0 iterations:1 tintColor:[UIColor colorWithRed:0.5 green:0.5 blue:0.5 alpha:1.0]];
+//      blur = [image blurredImageWithRadius:0 iterations:1 tintColor:[UIColor blackColor]];
     }
     [self.shadeView.blurredImageView setImage:blur];
     
     //Special fix. If scaledImageWidth or scaledImageHeight < clearArea.width of clearArea.Height.
   CGSize cropBorder = [self getCropBorder];
-  topLeftPoint.center = CGPointMake(0, imageView.frame.origin.y);
-  bottomLeftPoint.center = CGPointMake(0, imageView.frame.origin.y+cropBorder.height);
-  bottomRightPoint.center = CGPointMake(cropBorder.width, imageView.frame.origin.y+cropBorder.height);
-  topRightPoint.center = CGPointMake(cropBorder.width, imageView.frame.origin.y);
+//  CGFloat start_y = imageView.frame.origin.y;
+  CGFloat start_y = self.frame.size.height/2-cropBorder.height/2;
+//  CGFloat start_x = 0;
+  CGFloat start_x = self.frame.size.width/2-cropBorder.width/2;
+  NSLog(@"start_y is %f", start_y);
+  topLeftPoint.center = CGPointMake(start_x, start_y);
+  bottomLeftPoint.center = CGPointMake(start_x, start_y+cropBorder.height);
+  bottomRightPoint.center = CGPointMake(start_x+cropBorder.width, start_y+cropBorder.height);
+  topRightPoint.center = CGPointMake(start_x+cropBorder.width, start_y);
     [self boundingBoxForTopLeft:topLeftPoint.center bottomLeft:bottomLeftPoint.center bottomRight:bottomRightPoint.center topRight:topRightPoint.center];
     CGRect clearArea = [self clearAreaFromControlPoints];
     cropAreaView.frame = clearArea;

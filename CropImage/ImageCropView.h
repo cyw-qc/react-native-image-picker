@@ -16,6 +16,8 @@
 @end
 
 #pragma mark ShadeView interface
+@interface BlurredImageView : UIImageView
+@end
 
 @interface ShadeView : UIView {
     CGFloat cropBorderRed, cropBorderGreen, cropBorderBlue, cropBorderAlpha;
@@ -26,9 +28,10 @@
 @property (nonatomic, retain) UIColor* cropBorderColor;
 @property (nonatomic) CGRect cropArea;
 @property (nonatomic) CGFloat shadeAlpha;
-@property (nonatomic, strong) UIImageView *blurredImageView;
+@property (nonatomic, strong) BlurredImageView *blurredImageView;
 
 @end
+
 
 CGRect SquareCGRectAtCenter(CGFloat centerX, CGFloat centerY, CGFloat size);
 
@@ -51,6 +54,9 @@ typedef struct {
 
 #pragma mark ImageCropView interface
 
+@interface CropAreaView : UIView
+@end
+
 @interface ImageCropView : UIView {
     UIImageView* imageView;
     CGRect imageFrameInView;
@@ -64,7 +70,7 @@ typedef struct {
     NSArray *PointsArray;
     UIColor* controlColor;
 
-    UIView* cropAreaView;
+    CropAreaView* cropAreaView;
     DragPoint dragPoint;
     MultiDragPoint multiDragPoint;
     
