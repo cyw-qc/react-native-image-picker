@@ -61,6 +61,8 @@ float IMAGE_MIN_WIDTH = 400;
       [[self navigationController]navigationBar].translucent = false;
         CGRect view = CGRectMake(0, 0, self.view.bounds.size.width, self.view.bounds.size.height - [[self navigationController] navigationBar].bounds.size.height - statusBarSize.height);
         self.cropView  = [[ImageCropView alloc] initWithFrame:view blurOn:self.blurredBackground];
+      [self.cropView setHeightFactor: [self heightFactor]];
+      [self.cropView setWidthFactor: [self widthFactor]];
       //让遮罩颜色更深
         self.cropView.blurred = true;
         self.view = contentView;
@@ -212,6 +214,8 @@ CGRect SquareCGRectAtCenter(CGFloat centerX, CGFloat centerY, CGFloat size) {
 @synthesize cropAreaInImage;
 @synthesize imageScale;
 @synthesize resizeAble;
+//@synthesize heightFactor;
+//@synthesize widthFactor;
 
 - (id)initWithFrame:(CGRect)frame
 {
@@ -741,18 +745,26 @@ CGRect SquareCGRectAtCenter(CGFloat centerX, CGFloat centerY, CGFloat size) {
     [self setNeedsDisplay];
 }
 
+#pragma mark 给出萌芽要求的2:1的框
 //给出萌芽要求的2:1的框
 - (CGSize)getCropBorder {
   CGFloat width = imageView.frame.size.width;
   CGFloat height = imageView.frame.size.height;
   NSLog(@"imageView.frame is: %@", NSStringFromCGRect(imageView.frame));
-  if (width/2 > height) {
-    NSLog(@"cropBorderA size is: %@", NSStringFromCGSize(CGSizeMake(height*2, height)));
-    return CGSizeMake(height*2, height);
+  if (width/[self widthFactor] < height/[self heightFactor]) {
+    NSLog(@"cropBorderA size is: %@", NSStringFromCGSize(CGSizeMake(width, width*([self heightFactor]/[self widthFactor]))));
+    return CGSizeMake(width, width*(_heightFactor/_widthFactor));
   }else{
-    NSLog(@"cropBorderB size is: %@", NSStringFromCGSize(CGSizeMake(width, width/2)));
-    return CGSizeMake(width, width/2);
+    NSLog(@"cropBorderB size is: %@", NSStringFromCGSize(CGSizeMake(height*([self widthFactor]/[self heightFactor]), height)));
+    return CGSizeMake(height*([self widthFactor]/[self heightFactor]), height);
   }
+//  if (width/self.widthFactor > height/self.heightFactor) {
+//    NSLog(@"cropBorderA size is: %@", NSStringFromCGSize(CGSizeMake(height*self.widthFactor, height*self.heightFactor)));
+//    return CGSizeMake(height*self.widthFactor, height*self.heightFactor);
+//  }else{
+//    NSLog(@"cropBorderB size is: %@", NSStringFromCGSize(CGSizeMake(width, width/self.widthFactor)));
+//    return CGSizeMake(width, width/self.widthFactor);
+//  }
 }
 
 - (void)setImage:(UIImage *)image {

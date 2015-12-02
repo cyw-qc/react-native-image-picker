@@ -27,7 +27,9 @@ RCT_EXPORT_MODULE();
             @"takePhotoButtonTitle": @"Take Photo…",
             @"chooseFromLibraryButtonTitle": @"Choose from Library…",
             @"quality" : @0.2, // 1.0 best to 0.0 worst
-            @"allowsEditing" : @NO
+            @"allowsEditing" : @NO,
+            @"width": @2,
+            @"height": @1,
         };
     }
     return self;
@@ -208,12 +210,12 @@ RCT_EXPORT_METHOD(showImagePicker:(NSDictionary *)options callback:(RCTResponseS
   NSLog(@"imagePickerController didFinishPickingMediaWithInfo %@", info);
   
   dispatch_async(dispatch_get_main_queue(), ^{
-    UIImage *image = [info objectForKey:UIImagePickerControllerOriginalImage];
+//    UIImage *image = [info objectForKey:UIImagePickerControllerOriginalImage];
 //    UIViewController *root = [[[[UIApplication sharedApplication] delegate] window] rootViewController];
 //    if ([[self.options objectForKey:@"allowsEditing"] boolValue] == true){
-    self.croper = [[ImageCropViewController alloc] initWithImage:image];
+//    self.croper = [[ImageCropViewController alloc] initWithImage:image];
     //禁止缩放
-    self.croper.cropView.resizeAble = false;
+//    self.croper.cropView.resizeAble = false;
     self.navi = [[UINavigationController alloc] init];
 
     BOOL bAnimation = NO;
@@ -233,6 +235,11 @@ RCT_EXPORT_METHOD(showImagePicker:(NSDictionary *)options callback:(RCTResponseS
       if ([[self.options objectForKey:@"allowsEditing"] boolValue] == true){
         NSLog(@"edit is true");
         self.croper = [[ImageCropViewController alloc] initWithImage:image];
+        self.croper.cropView.resizeAble = false;
+        NSNumber *width = self.options[@"width"];
+        NSNumber *height = self.options[@"height"];
+        [self.croper setWidthFactor:[width floatValue]];
+        [self.croper setHeightFactor:[height floatValue]];
         self.navi = [[UINavigationController alloc] init];
         UIViewController *root = [[[[UIApplication sharedApplication] delegate] window] rootViewController];
         self.croper.delegate = self;
